@@ -1,0 +1,37 @@
+name: terraform-lint-and-plan
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+jobs:
+  terraform-dev:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: infra/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/oidc-readonly-role
+          aws-region: ap-northeast-1
+      - name: version
+        run: echo "version=$(cat ../.terraform-version)" >> "$GITHUB_ENV"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.version }}
+      - name: init
+        run: terraform init
+      - name: fmt
+        run: terraform fmt -check
+      - name: validate
+        run: terraform validate
+      - name: plan
+        run: terraform plan -no-color
