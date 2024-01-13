@@ -6,6 +6,8 @@ on:
       - synchronize
       - reopened
       - edited
+    paths:
+      - "infra/**"
 jobs:
   terraform-dev:
     runs-on: ubuntu-latest
