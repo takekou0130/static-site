@@ -68,3 +68,37 @@ data "aws_iam_policy_document" "write_to_tf_lock" {
     resources = [aws_dynamodb_table.tfstate.arn]
   }
 }
+
+// IAM Role for terraform apply (using in main branch)
+// TODO:maybe use https://dev.classmethod.jp/articles/pike-terraform-generate-iam-policy/
+data "aws_iam_policy_document" "assume_role_for_main_branch" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github_actions.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      // restrict main branch
+      values = ["repo:takekou0130/static-site:ref:refs/heads/main"]
+    }
+  }
+}
+
+resource "aws_iam_role" "oidc_admin" {
+  name               = "oidc-admin-role"
+  assume_role_policy = data.aws_iam_policy_document.assume_role_for_main_branch.json
+}
+
+resource "aws_iam_role_policy_attachment" "admin_for_terraform" {
+  role       = aws_iam_role.oidc_admin.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
