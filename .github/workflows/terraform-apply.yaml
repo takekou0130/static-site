@@ -35,6 +35,7 @@ jobs:
       - uses: actions/github-script@v7
         env:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          TZ: "Asia/Tokyo"
         with:
           script: |
             const output = `
