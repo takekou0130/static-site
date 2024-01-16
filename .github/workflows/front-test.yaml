@@ -1,0 +1,29 @@
+name: front-test
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - edited
+    paths:
+      - "front/**"
+jobs:
+  front-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: front/.node-version
+          cache: "npm"
+          cache-dependency-path: front/package-lock.json
+      - run: npm ci
+      - name: lint
+        run: npm run lint
+      - name: build check
+        run: npn run build
