@@ -1,0 +1,55 @@
+name: front-deploy
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "front/**"
+jobs:
+  front-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+    defaults:
+      run:
+        shell: bash
+        working-directory: front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/oidc-admin-role
+          aws-region: ap-northeast-1
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: front/.node-version
+          cache: "npm"
+          cache-dependency-path: front/package-lock.json
+      - run: npm ci
+      - name: build
+        run: npm run build
+      - name: deploy
+        run: |
+          echo "AWS s3 sync"
+          aws s3 sync ./out s3://hosting-takekou-static-site-dev --delete
+      - uses: actions/github-script@v7
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          TZ: "Asia/Tokyo"
+        with:
+          script: |
+            const output = `
+              ### Applocation Deploy
+
+              Detect front code changes. Uppload new resources to s3 bucket.
+              Check result and close this issue if there is no problem.
+            `
+            const title = `Deploy at ${(new Date).toString()}`
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output,
+              title,
+            })
